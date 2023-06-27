@@ -54,9 +54,9 @@ if __name__=='__main__':
     # Position of camera
     h = 3  # [m]
     # Camera angle - theta#
-    theta_gt = np.deg2rad(50+90) 
+    theta_gt = np.deg2rad(20+90) 
     # Camera angle - phi
-    phi_gt = np.deg2rad(0) 
+    phi_gt = np.deg2rad(30) 
     # Vector of camera position
     cam_pos = [0,0,h]  
     # Resolution of the image
@@ -71,7 +71,7 @@ if __name__=='__main__':
     lines =[]
     for i in range(n):
         x = np.random.uniform(-2,2)
-        y = traj["lin"](x)
+        y = traj["sin"](x)
         #y = np.random.uniform(2,15) # Working distance [mm->m]
         lines.append(np.array([[x,y,0],
                                 [x,y,l]]))
@@ -108,15 +108,19 @@ if __name__=='__main__':
         p_lines.append(x.squeeze(1))
 
     # Input image noise
-    noises = [0.0, 2.0, 10.0]
-    noise_linesegs = np.array([gaussian_noise(p_lines, 0.0, noise) for noise in noises])
-    
+    # noises = [0.0, 2.0, 10.0]
+    # noise_linesegs = np.array([gaussian_noise(p_lines, 0.0, noise) for noise in noises])
+    noise = 0
+    p_lines = gaussian_noise(p_lines, 0, noise)
     #Visualize projected image
     plt.figure()
-    for i,noise_lineseg in enumerate(noise_linesegs):
-        plt.subplot(3, 1, i+1)
-        for x in noise_lineseg:
-            plt.plot(x[:,0], x[:,1]) 
+    # for i,noise_lineseg in enumerate(p_lines):
+    #     plt.subplot(3, 1, i+1)
+    #     for x in noise_lineseg:
+    #         plt.plot(x[:,0], x[:,1]) 
+
+    for x in p_lines:
+        plt.plot(x[:,0], x[:,1])
     plt.xlim([0,cam_w])
     plt.ylim([cam_h,0])
     plt.legend()
@@ -125,23 +129,30 @@ if __name__=='__main__':
 
 
     # get a,b 
-    a_s = np.array([a for noise_lineseg in noise_linesegs for a, _ in noise_lineseg]).reshape(3,n,-1)
-    b_s = np.array([b for noise_lineseg in noise_linesegs for _, b in noise_lineseg]).reshape(3,n,-1)
+    # a_s = np.array([a for noise_lineseg in noise_linesegs for a, _ in noise_lineseg]).reshape(3,n,-1)
+    # b_s = np.array([b for noise_lineseg in noise_linesegs for _, b in noise_lineseg]).reshape(3,n,-1)
+    a = np.array([aa[0] for aa in p_lines])
+    b = np.array([bb[1] for bb in p_lines])
+
     
     # Solve only M matrix to get lambda and mu for their visualization via the noise increases      
-    p_depths = np.array([solve_M(a,b) for a,b in zip(a_s, b_s)])
-    lms, mus = p_depths[:,0,:,:], p_depths[:,1,:,:]
-    
-    zips = [noises, lms, mus]
+    # p_depths = np.array([solve_M(a,b) for a,b in zip(a_s, b_s)])
+    # lms, mus = p_depths[:,0,:,:], p_depths[:,1,:,:]
+    lm, mu = solve_M(a, b)
 
-    plt.title("Projecitve depths along the noise")
-    for idx, (noise, lm , mu) in enumerate(zip(*zips)):
-        plt.subplot(3, 1, idx+1)
-        plt.scatter(np.arange(n),lm/mu)
-        # plt.xlim(-1,1)
-        # plt.ylim(-1,1)
-        plt.ylabel(f"lambda depth with noise std: {noise}")
-        plt.xlabel(f"mu depth with noise std: {noise}")
+    # zips = [noises, lms, mus]
 
+    plt.title(f"Projecitve depths along the noise-{noise}")
+    # for idx, (noise, lm , mu) in enumerate(zip(*zips)):
+    #     plt.subplot(3, 1, idx+1)
+    #     plt.scatter(np.arange(n),lm/mu)
+    #     # plt.xlim(-1,1)
+    #     # plt.ylim(-1,1)
+    #     plt.ylabel(f"lambda depth with noise std: {noise}")
+    #     plt.xlabel(f"mu depth with noise std: {noise}")
+
+
+    plt.scatter(np.arange(n), lm/ mu)
+    plt.xlim(-10,n+10)
+    plt.ylim(-.5, 2.5)
     plt.show()
-
